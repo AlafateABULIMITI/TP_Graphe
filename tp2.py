@@ -3,7 +3,7 @@
 # Lecture du fichier
 # ############################
 
-fichier_graphe = 'graphe_ff.txt'
+fichier_graphe = 'graphe_test1.txt'
 
 # Format du fichier :
 # Pour chaque arc :
@@ -84,7 +84,7 @@ def maj_courleur():
 
 def ChercheCycle_NRV(u0):
     # print 'ChercherCycle'
-    global Predecesseur, Successeur, LaChaine
+    global Predecesseur, Successeur, LaChaine, Marque
     Marque = [0 for j in range(0, NbSommets)]
     Predecesseur = [-1 for j in range(0, NbSommets)]
     Successeur = [-1 for j in range(0, NbSommets)]
@@ -186,70 +186,21 @@ def ModifierFlot():
     for i in LaChaine:
         u = i[0]
         sens = i[1]
-        # print 'u = ', u
-        # print 'Couleur[u] ', Couleur[u]
-        # print 'Capa_max[u] ', Capa_max[u]
-        # print 'Capa_min[u] ', Capa_min[u]
         if sens == 1:
             episilon = min(episilon, Capa_max[u] - Flot[u])
         else:
             episilon = min(episilon, Flot[u] - Capa_min[u])
-    # print 'episilon ', episilon
     for i in LaChaine:
         u = i[0]
         sens = i[1]
         Flot[u] += episilon * sens
 
 
-def ChercheSetA(u0):
-    global setA, setXA
-    Liste = []
-    dep = Destination[u0]
-    # print 'dest u0 = ', dep
-    arr = Origine[u0]
-    Liste.append(dep)
-    setA.append(dep)
-    Deja_emplie = [0] * NbSommets
-    Marque = [0 for j in range(0, NbSommets)]
-    while (Liste != []):
-        i = Liste[0]
-        Marque[i] = 1
-        del (Liste[0])
-        for s in succ[i]:
-            if s != arr and Marque[s] == 0 and Deja_emplie[s] == 0:
-                if Couleur[u0] == 'N':
-                    if Couleur_succ[i][succ[i].index(
-                            s)] == 'N' or Couleur_succ[i][succ[i].index(
-                                s)] == 'R':
-                        Liste = [s] + Liste
-                        setA.append(s)
-                        Deja_emplie[s] = 1
-                elif Couleur[u0] == 'V':
-                    if Couleur_succ[i][succ[i].index(
-                            s)] == 'V' or Couleur_succ[i][succ[i].index(
-                                s)] == 'R':
-                        Liste = [s] + Liste
-                        setA.append(s)
-                        Deja_emplie[s] = 1
-        for d in prec[i]:
-            if d != arr and Marque[d] == 0 and Deja_emplie[d] == 0:
-                if Couleur[u0] == 'N':
-                    if Couleur_prec[i][prec[i].index(
-                            d)] == 'V' or Couleur_prec[i][prec[i].index(
-                                d)] == 'R':
-                        Liste = [d] + Liste
-                        setA.append(d)
-                        Deja_emplie[d] = 1
-                elif Couleur[u0] == 'V':
-                    if Couleur_prec[i][prec[i].index(
-                            d)] == 'N' or Couleur_prec[i][prec[i].index(
-                                d)] == 'R':
-                        Liste = [d] + Liste
-                        setA.append(d)
-                        Deja_emplie[d] = 1
+def ChercheSetA():
+    global setA, Marque
     for i in range(0, NbSommets):
-        if i not in setA:
-            setXA.append(i)
+        if Marque[i] == 1:
+            setA.append(i)
 
 
 def ChercheOmega(setA):
@@ -294,18 +245,17 @@ print 'Compatible: ', Compatible
 print 'Flot: ', Flot
 if NbCompatible != NbArcs:
     u0 = Compatible.index(0)
-    ChercheSetA(u0)
+    ChercheSetA()
     # print 'setA ', setA
     # print 'setXA ', setXA
     ChercheOmega(setA)
-    if Couleur[u0] == 'V':
-        temp = omegaPlus
-        omegaPlus = omegaMoins
-        omegaMoins = temp
     # print omegaPlus
     # print omegaMoins
     wp = sum(Capa_max[i] for i in omegaPlus)
     wm = sum(Capa_min[i] for i in omegaMoins)
+    print 'omegaP:', omegaPlus, 'omegaM: ', omegaMoins
+    print setA
+    print Couleur[u0]
     print wp, wm
     if wp - wm < 0:
         print "Il n'existe pas de flot compatible!"

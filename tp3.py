@@ -54,6 +54,8 @@ for u in range(0, NbArcs):
     Couleur_succ[Origine[u]].append('N')
     Couleur_prec[Destination[u]].append('N')
 
+# Flot = [9, 0, 9, 9, 9]
+# Theta = [10, 20, 10, 5, -25]
 Flot = [0] * NbArcs
 Theta = [0] * NbArcs
 
@@ -99,7 +101,7 @@ def maj_courleur_mcf():
 
 def ChercheCycle_NRV(u0):
     # print 'ChercherCycle'
-    global Predecesseur, Successeur, LaChaine
+    global Predecesseur, Successeur, LaChaine, Marque
     Marque = [0 for j in range(0, NbSommets)]
     Predecesseur = [-1 for j in range(0, NbSommets)]
     Successeur = [-1 for j in range(0, NbSommets)]
@@ -138,7 +140,10 @@ def ChercheCycle_NRV(u0):
             Liste = [p] + Liste
             Deja_emplie[p] = 1
             Successeur[p] = dep
-    # print 'List init: ', Liste
+
+
+#    print 'List init: ', Liste
+#    print Couleur
     while Liste != [] and not trouve:
         # print 'chaeuqe Liste: ', Liste
         i = Liste[0]
@@ -195,7 +200,9 @@ def ChercheCycle_NRV(u0):
 def ModifierFlot():
     # print 'modifier Flot'
     global Flot, LaChaine
-    episilon = 999999
+    print 'In modifyFlow ', Flot
+    print Couleur
+    episilonf = 999999
     # print 'LaChaine ', LaChaine
     # print 'Flot ', Flot
     for i in LaChaine:
@@ -206,18 +213,19 @@ def ModifierFlot():
         # print 'Capa_max[u] ', Capa_max[u]
         # print 'Capa_min[u] ', Capa_min[u]
         if sens == 1:
-            episilon = min(episilon, Capa_max[u] - Flot[u])
+            episilonf = min(episilonf, Capa_max[u] - Flot[u])
         else:
-            episilon = min(episilon, Flot[u] - Capa_min[u])
-    # print 'episilon ', episilon
+            episilonf = min(episilonf, Flot[u] - Capa_min[u])
+    # print 'episilonf ', episilonf
     for i in LaChaine:
         u = i[0]
         sens = i[1]
-        Flot[u] += episilon * sens
+        Flot[u] += episilonf * sens
 
 
 def ChercheSetA(u0):
     global setA
+    setA = []
     Liste = []
     dep = Destination[u0]
     # print 'dest u0 = ', dep
@@ -266,6 +274,8 @@ def ChercheSetA(u0):
 
 def ChercheOmega(setA):
     global omegaPlus, omegaMoins
+    omegaPlus = []
+    omegaMoins = []
     for i in range(0, NbArcs):
         if Origine[i] in setA and Destination[i] not in setA:
             omegaPlus.append(i)
@@ -276,19 +286,25 @@ def ChercheOmega(setA):
 def ModifierTension(op, om):
     global Theta
     episilon = 99999
+    temp = []
+    sens = 1
     for i in (op + om):
-        if Theta[i] < Gamma[i]:
-            if Couleur[i] == 'I':
-                episilon = 99999
-            episilon = min(episilon, Gamma[i] - Theta[i])
-        if Theta[i] > Gamma[i]:
-            if Couleur[i] == 'I':
-                episilon = 99999
-            episilon = min(episilon, Theta[i] - Gamma[i])
+        if i in op:
+            if Flot[i] == Capa_max[i]:
+                temp.append(99999)
+            else:
+                temp.append(Gamma[i] - Theta[i])
+        elif i in om:
+            if Flot[i] == Capa_min[i] and Theta[i] <= Gamma[i]:
+                temp.append(99999)
+            else:
+                temp.append(Theta[i] - Gamma[i])
+    episilon = min(temp)
+
     for i in (op + om):
-        if Theta[i] < Gamma[i]:
+        if i in op:
             Theta[i] += episilon
-        if Theta[i] > Gamma[i]:
+        if i in om:
             Theta[i] -= episilon
 
 
@@ -296,18 +312,29 @@ Marque = [0 for j in range(0, NbSommets)]
 Predecesseur = [-1 for j in range(0, NbSommets)]
 Successeur = [-1 for j in range(0, NbSommets)]
 LaChaine = []
-Flot = [0] * NbArcs
+# Flot = [9, 0, 9, 9, 9]
 setA = []
 omegaPlus = []
 omegaMoins = []
 
 Compatible = [0] * NbArcs
 Conforme = [0] * NbArcs
-NbConforme = sum(Conforme)
 
 maj_courleur_mcf()
+for i in range(0, NbArcs):
+    if Theta[i] == Gamma[i] and (Flot[i] in range(Capa_min[i],
+                                                  Capa_max[i] + 1)):
+        Conforme[i] = 1
+    elif Theta[i] > Gamma[i] and Flot[i] == Capa_max[i]:
+        Conforme[i] = 1
+    elif Theta[i] < Gamma[i] and Flot[i] == Capa_min[i]:
+        Conforme[i] = 1
+    else:
+        Conforme[i] = 0
+NbConforme = sum(Conforme)
 while NbConforme != NbArcs:
     u0 = Conforme.index(0)
+    print Flot
     if ChercheCycle_NRV(u0):
         ModifierFlot()
     else:
@@ -317,16 +344,21 @@ while NbConforme != NbArcs:
             temp = omegaPlus
             omegaPlus = omegaMoins
             omegaMoins = temp
+        print 'setA:', setA
+        print 'o+:', omegaPlus
+        print 'flow before:', Flot
         ModifierTension(omegaPlus, omegaMoins)
     maj_courleur_mcf()
     for i in range(0, NbArcs):
         if Theta[i] == Gamma[i] and (Flot[i] in range(Capa_min[i],
                                                       Capa_max[i] + 1)):
             Conforme[i] = 1
-        if Theta[i] > Gamma[i] and Flot[i] == Capa_max[i]:
+        elif Theta[i] > Gamma[i] and Flot[i] == Capa_max[i]:
             Conforme[i] = 1
-        if Theta[i] < Gamma[i] and Flot[i] == Capa_min[i]:
+        elif Theta[i] < Gamma[i] and Flot[i] == Capa_min[i]:
             Conforme[i] = 1
+        else:
+            Conforme[i] = 0
     NbConforme = sum(Conforme)
 print 'Flot: ', Flot
 print 'Theta: ', Theta
